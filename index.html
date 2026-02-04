@@ -10,7 +10,8 @@
   <meta name="theme-color" content="#0b2a1b">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="apple-touch-icon-precomposed" href="apple-touch-icon.png">
 
   <style>
     :root{
@@ -20,6 +21,8 @@
       --muted:#bfe6c8;
       --red:#ff3b30;
       --green:#34c759;
+      --card: rgba(0,0,0,.14);
+      --stroke: rgba(255,255,255,.10);
     }
     *{ box-sizing:border-box; }
     body{
@@ -31,7 +34,6 @@
       overflow:hidden;
     }
 
-    /* Fullscreen stage */
     .stage{
       position:fixed; inset:0;
       display:flex; flex-direction:column;
@@ -40,13 +42,13 @@
       background: radial-gradient(1200px 900px at 50% -220px, #145b37 0%, #0b2a1b 55%);
     }
 
-    /* Splash: big app icon button */
+    /* Splash */
     .splash{
       position:absolute; inset:0;
       display:flex; flex-direction:column;
       align-items:center; justify-content:center;
       gap:16px;
-      background: linear-gradient(180deg, rgba(0,0,0,.15) 0%, rgba(0,0,0,.35) 100%);
+      background: linear-gradient(180deg, rgba(0,0,0,.18) 0%, rgba(0,0,0,.40) 100%);
       backdrop-filter: blur(7px);
       z-index:10;
       transition: opacity .28s ease;
@@ -77,37 +79,122 @@
       font-size:28px;
       margin:0;
     }
-    .hint{ color:rgba(255,255,255,.65); font-size:12px; text-align:center; line-height:1.3; max-width:320px;}
+    .hint{ color:rgba(255,255,255,.65); font-size:12px; text-align:center; line-height:1.3; max-width:360px;}
 
-    /* Avatar area */
+    /* Avatar container */
     .avatarWrap{
       width:min(420px, 92vw);
       aspect-ratio: 1/1;
       border-radius:28px;
-      background: rgba(0,0,0,.14);
-      border:1px solid rgba(255,255,255,.10);
+      background: var(--card);
+      border:1px solid var(--stroke);
       overflow:hidden;
-      display:flex; align-items:center; justify-content:center;
       position:relative;
     }
-    .avatarWrap img{
-      width:100%; height:100%;
-      object-fit:cover;
-      image-rendering:auto;
+    .avatarBg{
+      position:absolute; inset:0;
+      background:url("assets/avatar_base.png") center/cover no-repeat;
+      transform: translate3d(0,0,0);
     }
 
-    /* mic area */
+    /* thought bubble */
+    .bubble{
+      position:absolute;
+      left:14px; right:14px; top:14px;
+      background: rgba(255,255,255,.92);
+      color:#123019;
+      border-radius:18px;
+      padding:12px 14px;
+      font-weight:900;
+      font-size:20px;
+      line-height:1.12;
+      box-shadow: 0 10px 30px rgba(0,0,0,.25);
+      opacity:0;
+      transform: translateY(-8px);
+      transition: opacity .2s ease, transform .2s ease;
+    }
+    .bubble.show{ opacity:1; transform: translateY(0); }
+    .bubble .small{ font-size:14px; font-weight:800; opacity:.75; display:block; margin-top:6px; }
+
+    /* Mouth overlay: only this moves while talking */
+    .mouth{
+      position:absolute;
+      width:34px; height:14px;
+      left:50%; top:56%;
+      transform: translate(-50%, -50%);
+      border-radius:0 0 18px 18px;
+      background:#6d2417;
+      box-shadow: 0 2px 0 rgba(0,0,0,.15) inset;
+      opacity:0;
+    }
+
+    /* Shrug overlays (simple neon hint) */
+    .shoulderL, .shoulderR{
+      position:absolute;
+      width:62px; height:30px;
+      top:66%;
+      background: rgba(183,255,42,.14);
+      border: 2px solid rgba(183,255,42,.38);
+      border-radius: 22px;
+      opacity:0;
+      filter: drop-shadow(0 0 10px rgba(183,255,42,.12));
+    }
+    .shoulderL{ left:18%; --rot: 6deg; transform: rotate(var(--rot)); }
+    .shoulderR{ right:18%; --rot:-6deg; transform: rotate(var(--rot)); }
+
+    /* Wave arm overlay */
+    .arm{
+      position:absolute;
+      width:22px; height:78px;
+      right:18%; top:38%;
+      background: rgba(183,255,42,.18);
+      border:2px solid rgba(183,255,42,.42);
+      border-radius:18px;
+      opacity:0;
+      transform-origin: 30% 90%;
+      transform: rotate(8deg);
+    }
+    .hand{
+      position:absolute;
+      width:30px; height:26px;
+      right:-8px; top:-16px;
+      background: rgba(183,255,42,.18);
+      border:2px solid rgba(183,255,42,.42);
+      border-radius:14px;
+    }
+
+    /* States */
+    .state-idle .mouth, .state-idle .shoulderL, .state-idle .shoulderR, .state-idle .arm{ opacity:0; }
+    .state-talking .mouth{ opacity:1; animation: mouth 160ms ease-in-out infinite; }
+    @keyframes mouth{
+      0%{ height:10px; width:30px; border-radius:0 0 18px 18px; }
+      50%{ height:22px; width:36px; border-radius: 18px; }
+      100%{ height:14px; width:34px; border-radius:0 0 18px 18px; }
+    }
+
+    .state-shrug .shoulderL, .state-shrug .shoulderR{ opacity:1; animation: shrug 650ms ease-in-out 2; }
+    @keyframes shrug{
+      0%{ transform: translateY(0) rotate(var(--rot)); }
+      50%{ transform: translateY(-10px) rotate(var(--rot)); }
+      100%{ transform: translateY(0) rotate(var(--rot)); }
+    }
+
+    .state-waving .arm{ opacity:1; animation: wave 220ms ease-in-out 8 alternate; }
+    @keyframes wave{
+      from{ transform: rotate(10deg); }
+      to{ transform: rotate(-18deg); }
+    }
+
+    /* Mic area */
     .micArea{
       width:min(520px, 92vw);
       margin-top:16px;
       border-radius:22px;
-      background: rgba(0,0,0,.14);
-      border:1px solid rgba(255,255,255,.10);
+      background: var(--card);
+      border:1px solid var(--stroke);
       padding:14px 14px 12px;
     }
-    .micRow{
-      display:flex; align-items:center; gap:12px;
-    }
+    .micRow{ display:flex; align-items:center; gap:12px; }
     .mic70{
       width:64px; height:88px;
       border-radius:20px;
@@ -151,18 +238,31 @@
       background: var(--green);
       box-shadow: 0 0 14px rgba(52,199,89,.55);
     }
-    .label{
-      font-size:12px; color:rgba(255,255,255,.78); font-weight:900; letter-spacing:.4px;
-    }
-    .sub{
-      font-size:12px; color: rgba(255,255,255,.55); margin-top:3px; line-height:1.25;
-    }
-    .txt{
-      flex:1;
-      min-width:0;
-    }
+    .label{ font-size:12px; color:rgba(255,255,255,.82); font-weight:900; letter-spacing:.4px; }
+    .sub{ font-size:12px; color: rgba(255,255,255,.55); margin-top:3px; line-height:1.25; }
+    .txt{ flex:1; min-width:0; }
 
-    /* waveform (real) */
+    /* VU meter ticks */
+    .vuWrap{ display:flex; align-items:center; gap:10px; }
+    .vu{
+      width:18px; height:88px;
+      border-radius:12px;
+      background: rgba(0,0,0,.18);
+      border:1px solid rgba(255,255,255,.10);
+      padding:6px 5px;
+      display:flex; flex-direction:column; justify-content:flex-end;
+      gap:3px;
+      overflow:hidden;
+    }
+    .tick{
+      height:4px; border-radius:4px;
+      opacity:.20;
+      transition: opacity .05s linear;
+    }
+    .tick.g{ background: rgba(52,199,89,.95); }
+    .tick.r{ background: rgba(255,59,48,.95); }
+
+    /* Waveform */
     .wave{
       margin-top:10px;
       height:44px;
@@ -179,21 +279,19 @@
       height:6px;
       border-radius:6px;
       background: rgba(183,255,42,.88);
-      opacity:.45;
+      opacity:.25;
       transform-origin: bottom;
     }
 
-    /* tiny status */
     .status{
       margin-top:10px;
       width:min(520px, 92vw);
       text-align:center;
       font-size:13px;
-      color: rgba(255,255,255,.70);
+      color: rgba(255,255,255,.72);
       line-height:1.35;
     }
 
-    /* hidden debug textarea for typing if mic fails */
     .fallback{
       width:min(520px, 92vw);
       margin-top:10px;
@@ -210,7 +308,6 @@
     }
     .fallback.show{ display:block; }
 
-    /* bottom hint */
     .homeHint{
       position:fixed;
       left:0; right:0; bottom:10px;
@@ -225,30 +322,41 @@
 <body>
   <div class="stage">
 
-    <!-- Splash -->
     <div class="splash" id="splash">
       <button class="appBtn" id="startBtn" aria-label="Apri VBBE">
         <div class="appIcon">
-          <img src="assets/scene_shrug.png" alt="VBBE">
+          <img src="icon-512.png" alt="VBBE">
         </div>
         <p class="appName">VBBE’</p>
       </button>
       <div class="hint">
-        Tap necessario su iPhone per attivare voce + microfono. <br>
-        Poi parte da solo: niente tasti “Parla”.
+        Tap necessario su iPhone per attivare voce + microfono.<br>
+        Dopo: microfono auto + tacche VU anni ’70 + waveform reale.
       </div>
     </div>
 
-    <!-- Avatar fullscreen -->
-    <div class="avatarWrap">
-      <img id="avatarImg" src="assets/scene_shrug.png" alt="Avatar">
+    <div class="avatarWrap state-idle" id="avatarWrap">
+      <div class="avatarBg"></div>
+
+      <div class="bubble" id="bubble">
+        <span id="bubbleText"></span>
+        <span class="small" id="bubbleSub"></span>
+      </div>
+
+      <div class="mouth"></div>
+      <div class="shoulderL"></div>
+      <div class="shoulderR"></div>
+      <div class="arm"><div class="hand"></div></div>
     </div>
 
-    <!-- Mic + waveform -->
     <div class="micArea">
       <div class="micRow">
-        <div class="mic70" id="micBox">
-          <div class="micGlow" id="micGlow"></div>
+        <div class="vuWrap">
+          <div class="vu" id="vu"></div>
+
+          <div class="mic70" id="micBox">
+            <div class="micGlow" id="micGlow"></div>
+          </div>
         </div>
 
         <div class="txt">
@@ -269,38 +377,77 @@
       <input id="fallbackInput" placeholder="Se il microfono non va: scrivi e premi Invio…">
     </div>
 
-    <div class="homeHint">Suggerimento: Safari → Condividi → “Aggiungi a Home” per avere l’app a schermo intero.</div>
+    <div class="homeHint">Per schermo intero: Safari → Condividi → “Aggiungi a Home”.</div>
   </div>
 
 <script>
-  // ========= PWA service worker =========
+  // PWA
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(()=>{}));
   }
 
-  // ========= Assets =========
-  const IMG_SHRUG = "assets/scene_shrug.png";
-  const IMG_TALK_OPEN = "assets/scene_talk_open.png";
-  const IMG_TALK_CLOSED = "assets/scene_talk_closed.png";
-  const IMG_WAVE_1 = "assets/scene_wave_1.png";
-  const IMG_WAVE_2 = "assets/scene_wave_2.png";
-  const GIF_TALK = "assets/anim_talk.gif";
-  const GIF_WAVE = "assets/anim_wave.gif";
+  // Voice (best effort): we can’t force “ChatGPT voice”, but we pick the softest Italian female voice available.
+  let chosenVoice = null;
+  function pickSoftFemaleItalianVoice() {
+    const voices = window.speechSynthesis?.getVoices?.() || [];
+    if (!voices.length) return null;
 
-  // ========= Phrases =========
+    const isIt = v => (v.lang || "").toLowerCase().startsWith("it");
+    const score = (v) => {
+      const name = (v.name || "").toLowerCase();
+      const lang = (v.lang || "").toLowerCase();
+      let s = 0;
+      if (lang.startsWith("it")) s += 50;
+      if (name.includes("alice")) s += 40;   // common iOS Italian female
+      if (name.includes("google")) s += 8;
+      if (name.includes("siri")) s += 6;
+      if (name.includes("female") || name.includes("donna")) s += 8;
+      if (v.localService) s += 3;
+      if (name.includes("compact") || name.includes("default")) s -= 4;
+      return s;
+    };
+
+    const italian = voices.filter(isIt);
+    const pool = italian.length ? italian : voices;
+    pool.sort((a,b) => score(b) - score(a));
+    return pool[0] || null;
+  }
+  function ensureVoiceReady(){ chosenVoice = pickSoftFemaleItalianVoice(); }
+  if ("speechSynthesis" in window) {
+    speechSynthesis.onvoiceschanged = ensureVoiceReady;
+    setTimeout(ensureVoiceReady, 200);
+  }
+
+  function speak(text, opts = {}) {
+    try{
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = "it-IT";
+      u.rate = opts.rate ?? 0.98;   // softer
+      u.pitch = opts.pitch ?? 1.05; // slightly warmer
+      u.volume = opts.volume ?? 1.0;
+      if (chosenVoice) u.voice = chosenVoice;
+      window.speechSynthesis.speak(u);
+      return u;
+    } catch(e){ return null; }
+  }
+
+  // Phrases
   const PROMPT_TEXT = "Che succede? Posso aiutarti?";
   const ANSWERS = ["vabbè", "vabbè dai", "vabbè su", "vabbè andiamo", "vabbè ok", "vabbè allora", "vabbè ci sta", "vabbè tranquillo", "vabbè forza"];
   const BYE_TEXT = "Su con la vita!";
 
-  // Silence detection (2s)
+  // Silence detection
   const SILENCE_MS = 2000;
-  // voice threshold (tweakable): lower = more sensitive
-  const THRESHOLD = 0.03;
+  const THRESHOLD = 0.028;
 
-  // ========= DOM =========
+  // DOM
   const splash = document.getElementById("splash");
   const startBtn = document.getElementById("startBtn");
-  const avatarImg = document.getElementById("avatarImg");
+  const avatarWrap = document.getElementById("avatarWrap");
+  const bubble = document.getElementById("bubble");
+  const bubbleText = document.getElementById("bubbleText");
+  const bubbleSub = document.getElementById("bubbleSub");
   const statusEl = document.getElementById("status");
   const stateDot = document.getElementById("stateDot");
   const stateLabel = document.getElementById("stateLabel");
@@ -308,10 +455,11 @@
   const micGlow = document.getElementById("micGlow");
   const micBox = document.getElementById("micBox");
   const wave = document.getElementById("wave");
+  const vu = document.getElementById("vu");
   const fallbackWrap = document.getElementById("fallbackWrap");
   const fallbackInput = document.getElementById("fallbackInput");
 
-  // Build waveform bars
+  // Wave bars
   const BARS = 26;
   const bars = [];
   for(let i=0;i<BARS;i++){
@@ -321,42 +469,63 @@
     bars.push(b);
   }
 
-  // ========= TTS =========
-  function speak(text){
-    try{
-      window.speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = "it-IT";
-      u.rate = 1.0;
-      u.pitch = 1.0;
-      window.speechSynthesis.speak(u);
-    } catch(e){}
+  // VU ticks: 16 (12 green + 4 red)
+  const TICKS = 16;
+  const ticks = [];
+  for(let i=0;i<TICKS;i++){
+    const t = document.createElement("div");
+    t.className = "tick " + (i < 12 ? "g" : "r");
+    vu.appendChild(t);
+    ticks.push(t);
   }
 
-  // ========= Audio meter (real waveform) =========
+  // UI helpers
+  function setAvatarState(state){
+    avatarWrap.classList.remove("state-idle","state-talking","state-shrug","state-waving");
+    avatarWrap.classList.add(state);
+  }
+  function setMicActive(active){
+    stateDot.classList.toggle("green", active);
+    micGlow.style.opacity = active ? 1 : 0;
+    micBox.style.borderColor = active ? "rgba(183,255,42,.28)" : "rgba(255,255,255,.12)";
+    micBox.style.boxShadow = active ? "0 0 24px rgba(183,255,42,.12)" : "none";
+  }
+  function setLabel(main, sub){
+    stateLabel.textContent = main;
+    stateSub.textContent = sub;
+  }
+  function showBubble(text, sub=""){
+    bubbleText.textContent = text;
+    bubbleSub.textContent = sub;
+    bubble.classList.add("show");
+  }
+  function hideBubble(){ bubble.classList.remove("show"); }
+
+  function typeBubble(fullText, subText=""){
+    return new Promise((resolve) => {
+      showBubble("", subText);
+      let i=0;
+      const timer = setInterval(() => {
+        bubbleText.textContent = fullText.slice(0, i);
+        i++;
+        if (i > fullText.length){
+          clearInterval(timer);
+          resolve();
+        }
+      }, 28);
+    });
+  }
+
+  // Audio
   let audioCtx = null;
   let analyser = null;
   let micStream = null;
   let sourceNode = null;
   let rafId = null;
 
-  // For silence detection
   let lastLoudTs = 0;
   let listening = false;
   let everLoud = false;
-
-  function setMicState(active){
-    // active = true => green + glow
-    stateDot.classList.toggle("green", active);
-    micGlow.style.opacity = active ? 1 : 0;
-    micBox.style.borderColor = active ? "rgba(183,255,42,.28)" : "rgba(255,255,255,.12)";
-    micBox.style.boxShadow = active ? "0 0 24px rgba(183,255,42,.12)" : "none";
-  }
-
-  function setLabel(main, sub){
-    stateLabel.textContent = main;
-    stateSub.textContent = sub;
-  }
 
   async function startMic(){
     try{
@@ -375,26 +544,32 @@
       everLoud = false;
       lastLoudTs = performance.now();
 
-      setMicState(true);
+      setMicActive(true);
       setLabel("Ascolto", "Parla pure. Rispondo dopo 2s di silenzio.");
       statusEl.textContent = "🎙️ Ascolto…";
 
       const draw = () => {
         if(!analyser) return;
 
-        // Waveform visual (frequency)
         analyser.getByteFrequencyData(freq);
         const bucketSize = Math.floor(freq.length / BARS);
+        let level = 0;
         for(let i=0;i<BARS;i++){
           let sum=0;
           for(let j=0;j<bucketSize;j++) sum += freq[i*bucketSize + j];
-          const avg = sum / bucketSize; // 0..255
+          const avg = sum / bucketSize;
           const h = 6 + Math.min(34, (avg/255)*34);
           bars[i].style.height = h + "px";
-          bars[i].style.opacity = 0.25 + (avg/255)*0.65;
+          bars[i].style.opacity = 0.20 + (avg/255)*0.70;
+          level += avg;
+        }
+        level = level / (BARS*255);
+
+        const lit = Math.max(0, Math.min(TICKS, Math.round(level * (TICKS+3))));
+        for(let i=0;i<TICKS;i++){
+          ticks[i].style.opacity = (i < lit) ? 1.0 : 0.20;
         }
 
-        // Silence detection via RMS of time-domain
         analyser.getFloatTimeDomainData(time);
         let rms = 0;
         for(let i=0;i<time.length;i++){
@@ -409,10 +584,9 @@
           lastLoudTs = now;
         }
 
-        // When user has spoken at least once, and then silence holds 2s => respond
         if(listening && everLoud && (now - lastLoudTs) > SILENCE_MS){
           stopListeningAndRespond();
-          return; // stop loop
+          return;
         }
 
         rafId = requestAnimationFrame(draw);
@@ -420,10 +594,10 @@
 
       rafId = requestAnimationFrame(draw);
       return true;
+
     } catch(e){
-      // mic denied or unavailable
-      setMicState(false);
-      setLabel("Microfono off", "Permesso negato o non disponibile. Usa il campo testo.");
+      setMicActive(false);
+      setLabel("Microfono off", "Safari → aA → Impostazioni sito → Microfono → Consenti.");
       statusEl.textContent = "❌ Microfono non disponibile. Scrivi sotto.";
       fallbackWrap.classList.add("show");
       return false;
@@ -448,65 +622,55 @@
     }
     analyser = null;
 
-    // reset bars
-    bars.forEach(b => { b.style.height="6px"; b.style.opacity=.35; });
-    setMicState(false);
+    bars.forEach(b => { b.style.height="6px"; b.style.opacity=.25; });
+    ticks.forEach(t => t.style.opacity=.20);
+    setMicActive(false);
   }
 
-  // ========= Animation helpers (simple) =========
-  function showShrug(){
-    avatarImg.src = IMG_SHRUG;
-  }
-  function showTalkAnim(){
-    // use GIF for smooth preview
-    avatarImg.src = GIF_TALK;
-  }
-  function showWaveAnim(){
-    avatarImg.src = GIF_WAVE;
-  }
-
-  // ========= Main flow =========
+  // Flow
   async function startFlow(){
     splash.classList.add("hidden");
+    setAvatarState("state-idle");
+    hideBubble();
 
-    // 1) show logo/shrug
-    showShrug();
     setLabel("Avvio", "Ti faccio una domanda e poi ascolto.");
     statusEl.textContent = "▶️ Avvio…";
 
-    // 2) talk prompt with thought bubble + speaking animation
-    showTalkAnim();
-    speak(PROMPT_TEXT);
-    setLabel("Parlo", "“Che succede? Posso aiutarti?”");
-    statusEl.textContent = "🗣️ " + PROMPT_TEXT;
+    // Prompt
+    setAvatarState("state-talking");
+    await typeBubble(PROMPT_TEXT, "VBBE’");
 
-    // wait a bit before enabling mic (approx speech length)
-    // (keep it simple; if you want perfect sync we can estimate speech duration)
-    setTimeout(async () => {
-      // 3) auto start mic (no "parla" button)
-      await startMic();
-    }, 1800);
+    speak(PROMPT_TEXT);
+    const approxMs = Math.max(1400, PROMPT_TEXT.length * 55);
+    await new Promise(r => setTimeout(r, approxMs));
+
+    setAvatarState("state-idle");
+
+    // Mic auto
+    await startMic();
   }
 
   function answerFlow(){
     const a = ANSWERS[Math.floor(Math.random()*ANSWERS.length)];
-    showShrug();              // back to shrug for "vabbè" moment
-    statusEl.textContent = "✅ Risposta: " + a;
-    setLabel("Risposta", a);
-    speak(a);
 
-    // 4) goodbye
+    setAvatarState("state-shrug");
+    showBubble(a, "VBBE’");
+    speak(a);
+    setLabel("Risposta", a);
+    statusEl.textContent = "✅ " + a;
+
     setTimeout(() => {
-      showWaveAnim();
+      setAvatarState("state-waving");
+      showBubble(BYE_TEXT, "VBBE’");
+      speak(BYE_TEXT);
       setLabel("Saluto", BYE_TEXT);
       statusEl.textContent = "👋 " + BYE_TEXT;
-      speak(BYE_TEXT);
 
-      // 5) reset to initial after a moment
       setTimeout(() => {
-        showShrug();
-        setLabel("Pronto", "Tap per ripartire (o ricarica).");
-      }, 1800);
+        setAvatarState("state-idle");
+        hideBubble();
+        setLabel("Pronto", "Tap per ripartire.");
+      }, 1400);
     }, 900);
   }
 
@@ -515,20 +679,19 @@
     answerFlow();
   }
 
-  // Splash button
   startBtn.addEventListener("click", () => startFlow());
 
-  // Fallback typing: press Enter => respond (simulate speech end)
+  // Fallback typing
   fallbackInput.addEventListener("keydown", (e) => {
     if(e.key === "Enter"){
       const v = fallbackInput.value.trim();
       if(!v) return;
       fallbackInput.value = "";
       statusEl.textContent = "Hai scritto: “" + v + "”";
+      stopMic();
       answerFlow();
     }
   });
-
 </script>
 </body>
 </html>

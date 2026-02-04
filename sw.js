@@ -1,4 +1,4 @@
-const CACHE_NAME = "vbbe-v2";
+const CACHE_NAME = "vbbe-v3";
 const ASSETS = [
   "./",
   "./index.html",
@@ -7,13 +7,8 @@ const ASSETS = [
   "./icon-192.png",
   "./icon-512.png",
   "./apple-touch-icon.png",
-  "./assets/scene_shrug.png",
-  "./assets/scene_talk_open.png",
-  "./assets/scene_talk_closed.png",
-  "./assets/scene_wave_1.png",
-  "./assets/scene_wave_2.png",
-  "./assets/anim_talk.gif",
-  "./assets/anim_wave.gif"
+  "./assets/avatar_base.png",
+  "./assets/avatar_wave_bg.png"
 ];
 
 self.addEventListener("install", (event) => {
@@ -21,11 +16,11 @@ self.addEventListener("install", (event) => {
 });
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(caches.keys().then(keys => Promise.all(keys.map(k => k===CACHE_NAME? null : caches.delete(k)))).then(()=>self.clients.claim()));
+  event.waitUntil(
+    caches.keys().then(keys => Promise.all(keys.map(k => k===CACHE_NAME? null : caches.delete(k)))).then(()=>self.clients.claim())
+  );
 });
 
 self.addEventListener("fetch", (event) => {
-  event.respondWith(
-    caches.match(event.request).then((r) => r || fetch(event.request))
-  );
+  event.respondWith(caches.match(event.request).then((r) => r || fetch(event.request)));
 });
